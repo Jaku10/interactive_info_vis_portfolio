@@ -1,82 +1,124 @@
-// Instance-mode sketch for tab 3 (HWK #4.B) - Circular Progress Activity Clock
+// Instance-mode sketch for tab 3 (HWK #4.B) - Track Running Timer
 registerSketch('sk3', function (p) {
 
+  let duration = 60; 
+  let timeRemaining = duration;
+  let running = false;
+  let lastUpdate = 0;
+
+  let slider;
+
   p.setup = function () {
-    p.createCanvas(800, 800);
+    p.createCanvas(900, 900);
     p.colorMode(p.HSB, 360, 100, 100);
-    p.angleMode(p.DEGREES);
     p.textAlign(p.CENTER, p.CENTER);
+
+    slider = p.createSlider(60, 20 * 60, 60, 30);
+    slider.position(350, 780);
+    slider.style('width', '200px');
+
+    lastUpdate = p.millis();
   };
 
   p.draw = function () {
-    p.background(240, 20, 95);
-    
-    let cx = 400;
-    let cy = 400;
-    
-    // Get current time
-    let h = p.hour();
-    let m = p.minute();
-    let s = p.second();
-    
-    // Hour progress (0-24 hours)
-    let hourProgress = h / 24;
-    let hourAngle = hourProgress * 360;
-    
-    // Minute progress (current hour)
-    let minuteProgress = m / 60;
-    let minuteAngle = minuteProgress * 360;
-    
-    // Second progress (current minute)
-    let secondProgress = s / 60;
-    let secondAngle = secondProgress * 360;
-    
-    // Outer ring - hours (24-hour cycle)
-    p.noFill();
-    p.strokeWeight(25);
-    p.stroke(200, 30, 50, 0.3);
-    p.arc(cx, cy, 700, 700, -90, -90 + hourAngle);
-    
-    // Calculate color based on hour
-    let hourHue = p.map(h, 0, 23, 240, 30);
-    p.stroke(hourHue, 70, 80);
-    p.arc(cx, cy, 700, 700, -90, -90 + hourAngle);
-    
-    // Middle ring - minutes (60-minute cycle)
-    p.strokeWeight(20);
-    p.stroke(180, 20, 60, 0.3);
-    p.arc(cx, cy, 550, 550, -90, -90 + minuteAngle);
-    
-    let minuteHue = p.map(m, 0, 59, 180, 120);
-    p.stroke(minuteHue, 60, 70);
-    p.arc(cx, cy, 550, 550, -90, -90 + minuteAngle);
-    
-    // Inner ring - seconds (60-second cycle)
-    p.strokeWeight(15);
-    p.stroke(120, 20, 70, 0.3);
-    p.arc(cx, cy, 400, 400, -90, -90 + secondAngle);
-    
-    let secondHue = p.map(s, 0, 59, 120, 60);
-    p.stroke(secondHue, 80, 80);
-    p.arc(cx, cy, 400, 400, -90, -90 + secondAngle);
-    
-    // Center circle with time
+    p.background(0, 0, 95);
+
+    if (!running) {
+      duration = slider.value();
+      timeRemaining = duration;
+    }
+
+    if (running && timeRemaining > 0) {
+      let now = p.millis();
+      let dt = (now - lastUpdate) / 1000;
+      lastUpdate = now;
+
+      timeRemaining -= dt;
+      if (timeRemaining < 0) timeRemaining = 0;
+    }
+
+    let cx = p.width / 2;
+    let cy = p.height / 2;
+    let trackW = 650;
+    let trackH = 400;
+
+    drawTrack(cx, cy, trackW, trackH);
+
+    let progress = 1 - timeRemaining / duration;
+    let angle = progress * 360;
+    let runnerPos = pointOnOval(cx, cy, trackW - 60, trackH - 60, angle);
+
     p.noStroke();
-    p.fill(240, 10, 100);
-    p.circle(cx, cy, 300);
-    
-    // Time display
-    let timeString = p.nf(h, 2) + ":" + p.nf(m, 2) + ":" + p.nf(s, 2);
-    p.fill(240, 30, 20);
-    p.textSize(42);
-    p.text(timeString, cx, cy - 20);
-    
-    // Progress percentages
-    p.textSize(18);
-    p.fill(240, 20, 40);
-    p.text("Hour: " + p.nf(hourProgress * 100, 1, 1) + "%", cx, cy + 40);
-    p.text("Minute: " + p.nf(minuteProgress * 100, 1, 1) + "%", cx, cy + 65);
-    p.text("Second: " + p.nf(secondProgress * 100, 1, 1) + "%", cx, cy + 90);
+    p.fill(0, 90, 90);
+    p.circle(runnerPos.x, runnerPos.y, 25);
+
+    drawUI();
+  };
+
+  function drawUI() {
+    let t = Math.max(0, timeRemaining);
+    let min = Math.floor(t / 60);
+    let sec = Math.floor(t % 60);
+    let timeStr = p.nf(min, 2) + ":" + p.nf(sec, 2);
+
+    p.fill(0, 0, 20);
+    p.textSize(60);
+    p.text(timeStr, p.width / 2, 120);
+
+    p.textSize(22);
+    p.text("Set Duration (1–20 minutes)", p.width / 2, 750);
+
+    drawButton(300, 830, 140, 50, running ? "Pause" : "Start", () => {
+      running = !running;
+      lastUpdate = p.millis();
+    });
+
+    drawButton(460, 830, 140, 50, "Reset", () => {
+      running = false;
+      timeRemaining = duration;
+    });
+  }
+
+  function drawButton(x, y, w, h, label, action) {
+    let hover = p.mouseX > x && p.mouseX < x + w && p.mouseY > y && p.mouseY < y + h;
+
+    p.fill(hover ? p.color(200, 30, 90) : p.color(0, 0, 80));
+    p.rect(x, y, w, h, 10);
+
+    p.fill(0, 0, 20);
+    p.textSize(24);
+    p.text(label, x + w / 2, y + h / 2);
+  }
+
+  // Clean oval track using ellipses
+  function drawTrack(cx, cy, w, h) {
+    p.noFill();
+    p.stroke(0, 80, 80);
+    p.strokeWeight(14);
+    p.ellipse(cx, cy, w, h);
+
+    p.stroke(0, 0, 100);
+    p.strokeWeight(4);
+    p.ellipse(cx, cy, w - 40, h - 40);
+    p.ellipse(cx, cy, w - 80, h - 80);
+  }
+
+  function pointOnOval(cx, cy, w, h, angle) {
+    let x = cx + (w / 2) * p.cos(angle);
+    let y = cy + (h / 2) * p.sin(angle);
+    return { x, y };
+  }
+
+  p.mousePressed = function () {
+    if (p.mouseX > 300 && p.mouseX < 440 && p.mouseY > 830 && p.mouseY < 880) {
+      running = !running;
+      lastUpdate = p.millis();
+    }
+
+    if (p.mouseX > 460 && p.mouseX < 600 && p.mouseY > 830 && p.mouseY < 880) {
+      running = false;
+      timeRemaining = duration;
+    }
   };
 
 });
