@@ -1,125 +1,111 @@
+// Instance-mode sketch for tab 4 (HWK #4.C - Final Clock) - Interactive Sundial Clock
 registerSketch('sk4', function (p) {
 
-  let duration = 60; 
-  let timeRemaining = duration;
-  let running = false;
-  let lastUpdate = 0;
-
-  let slider;
+  let dragging = false;
+  let sunAngle = 0; // angle controlled by user
 
   p.setup = function () {
-    p.createCanvas(900, 900);
+    p.createCanvas(800, 800);
     p.colorMode(p.HSB, 360, 100, 100);
+    p.angleMode(p.DEGREES);
     p.textAlign(p.CENTER, p.CENTER);
-
-    slider = p.createSlider(60, 20 * 60, 60, 30);
-    slider.position(350, 780);
-    slider.style('width', '200px');
-
-    lastUpdate = p.millis();
   };
 
   p.draw = function () {
-    p.background(0, 0, 95);
+    // Convert sun angle to time
+    let totalMinutes = p.map(sunAngle, 0, 360, 0, 1440);
+    let hr = Math.floor(totalMinutes / 60) % 24;
+    let mn = Math.floor(totalMinutes % 60);
+    let sc = 0;
 
-    if (!running) {
-      duration = slider.value();
-      timeRemaining = duration;
+    // Sky color based on time
+    let skyHue = p.map(hr, 0, 23, 220, 40);
+    let skyBright = p.map(hr, 0, 23, 20, 100);
+    p.background(skyHue, 40, skyBright);
+
+    // Ground circle
+    p.noStroke();
+    p.fill(35, 20, 80);
+    p.circle(400, 400, 500);
+
+    // ---------------------------
+    // ROMAN NUMERAL HOUR LABELS
+    // ---------------------------
+    p.fill(0, 0, 20);
+    p.textSize(26);
+    p.textAlign(p.CENTER, p.CENTER);
+
+    let numerals = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
+
+    for (let i = 0; i < 12; i++) {
+      let angle = i * 30 - 90; // 12 at top
+      let r = 240; // radius for labels
+
+      let x = 400 + r * p.cos(angle);
+      let y = 400 + r * p.sin(angle);
+
+      p.text(numerals[i], x, y);
     }
 
-    if (running && timeRemaining > 0) {
-      let now = p.millis();
-      let dt = (now - lastUpdate) / 1000;
-      lastUpdate = now;
+    // Gnomon
+    p.stroke(0, 0, 20);
+    p.strokeWeight(8);
+    p.line(400, 400, 400, 250);
 
-      timeRemaining -= dt;
-      if (timeRemaining < 0) timeRemaining = 0;
-    }
+    // Shadow (opposite the sun)
+    let shadowLength = 220;
+    let shadowX = 400 + shadowLength * p.cos(sunAngle - 90);
+    let shadowY = 400 + shadowLength * p.sin(sunAngle - 90);
 
-    let cx = p.width / 2;
-    let cy = p.height / 2;
-    let trackW = 650;
-    let trackH = 400;
+    p.stroke(0, 0, 15, 0.7);
+    p.strokeWeight(6);
+    p.line(400, 400, shadowX, shadowY);
 
-    drawTrack(cx, cy, trackW, trackH);
-
-    let progress = 1 - timeRemaining / duration;
-    let angle = progress * 360;
-    let runnerPos = pointOnOval(cx, cy, trackW - 60, trackH - 60, angle);
+    // Sun position
+    let sunX = 400 + 300 * p.cos(sunAngle - 90);
+    let sunY = 400 + 300 * p.sin(sunAngle - 90);
 
     p.noStroke();
-    p.fill(0, 90, 90);
-    p.circle(runnerPos.x, runnerPos.y, 25);
+    p.fill(50, 80, 100);
+    p.circle(sunX, sunY, 40);
 
-    drawUI();
+    // Time label
+    let timeString =
+      p.nf(hr, 2) + ":" +
+      p.nf(mn, 2) + ":" +
+      p.nf(sc, 2);
+
+    p.fill(0, 0, 20);
+    p.textSize(32);
+    p.text(timeString, 400, 50);
+
+    // Title
+    p.textSize(26);
+    p.text("Interactive Sundial Clock", 400, 760);
   };
 
-  function drawUI() {
-    let t = Math.max(0, timeRemaining);
-    let min = Math.floor(t / 60);
-    let sec = Math.floor(t % 60);
-    let timeStr = p.nf(min, 2) + ":" + p.nf(sec, 2);
-
-    p.fill(0, 0, 20);
-    p.textSize(60);
-    p.text(timeStr, p.width / 2, 120);
-
-    p.textSize(22);
-    p.text("Set Duration (1–20 minutes)", p.width / 2, 750);
-
-    drawButton(300, 830, 140, 50, running ? "Pause" : "Start", () => {
-      running = !running;
-      lastUpdate = p.millis();
-    });
-
-    drawButton(460, 830, 140, 50, "Reset", () => {
-      running = false;
-      timeRemaining = duration;
-    });
-  }
-
-  function drawButton(x, y, w, h, label, action) {
-    let hover = p.mouseX > x && p.mouseX < x + w && p.mouseY > y && p.mouseY < y + h;
-
-    p.fill(hover ? p.color(200, 30, 90) : p.color(0, 0, 80));
-    p.rect(x, y, w, h, 10);
-
-    p.fill(0, 0, 20);
-    p.textSize(24);
-    p.text(label, x + w / 2, y + h / 2);
-  }
-
-  // Clean oval track using ellipses
-  function drawTrack(cx, cy, w, h) {
-    p.noFill();
-    p.stroke(0, 80, 80);
-    p.strokeWeight(14);
-    p.ellipse(cx, cy, w, h);
-
-    p.stroke(0, 0, 100);
-    p.strokeWeight(4);
-    p.ellipse(cx, cy, w - 40, h - 40);
-    p.ellipse(cx, cy, w - 80, h - 80);
-  }
-
-  function pointOnOval(cx, cy, w, h, angle) {
-    let x = cx + (w / 2) * p.cos(angle);
-    let y = cy + (h / 2) * p.sin(angle);
-    return { x, y };
-  }
-
+  // Drag the sun to change time
   p.mousePressed = function () {
-    if (p.mouseX > 300 && p.mouseX < 440 && p.mouseY > 830 && p.mouseY < 880) {
-      running = !running;
-      lastUpdate = p.millis();
-    }
+    let dx = p.mouseX - 400;
+    let dy = p.mouseY - 400;
+    let distFromCenter = p.sqrt(dx * dx + dy * dy);
 
-    if (p.mouseX > 460 && p.mouseX < 600 && p.mouseY > 830 && p.mouseY < 880) {
-      running = false;
-      timeRemaining = duration;
+    // Only allow dragging if clicking near the sun
+    if (distFromCenter > 260 && distFromCenter < 340) {
+      dragging = true;
     }
+  };
+
+  p.mouseDragged = function () {
+    if (dragging) {
+      let dx = p.mouseX - 400;
+      let dy = p.mouseY - 400;
+      sunAngle = (p.atan2(dy, dx) + 90 + 360) % 360;
+    }
+  };
+
+  p.mouseReleased = function () {
+    dragging = false;
   };
 
 });
-
-

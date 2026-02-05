@@ -1,8 +1,5 @@
-// Instance-mode sketch for tab 3 (HWK #4.B)
+// Instance-mode sketch for tab 3 (HWK #4.B) - Circular Progress Activity Clock
 registerSketch('sk3', function (p) {
-
-  let dragging = false;
-  let sunAngle = 0; // angle controlled by user
 
   p.setup = function () {
     p.createCanvas(800, 800);
@@ -12,101 +9,74 @@ registerSketch('sk3', function (p) {
   };
 
   p.draw = function () {
-    // Convert sun angle to time
-    let totalMinutes = p.map(sunAngle, 0, 360, 0, 1440);
-    let hr = Math.floor(totalMinutes / 60) % 24;
-    let mn = Math.floor(totalMinutes % 60);
-    let sc = 0;
-
-    // Sky color based on time
-    let skyHue = p.map(hr, 0, 23, 220, 40);
-    let skyBright = p.map(hr, 0, 23, 20, 100);
-    p.background(skyHue, 40, skyBright);
-
-    // Ground circle
+    p.background(240, 20, 95);
+    
+    let cx = 400;
+    let cy = 400;
+    
+    // Get current time
+    let h = p.hour();
+    let m = p.minute();
+    let s = p.second();
+    
+    // Hour progress (0-24 hours)
+    let hourProgress = h / 24;
+    let hourAngle = hourProgress * 360;
+    
+    // Minute progress (current hour)
+    let minuteProgress = m / 60;
+    let minuteAngle = minuteProgress * 360;
+    
+    // Second progress (current minute)
+    let secondProgress = s / 60;
+    let secondAngle = secondProgress * 360;
+    
+    // Outer ring - hours (24-hour cycle)
+    p.noFill();
+    p.strokeWeight(25);
+    p.stroke(200, 30, 50, 0.3);
+    p.arc(cx, cy, 700, 700, -90, -90 + hourAngle);
+    
+    // Calculate color based on hour
+    let hourHue = p.map(h, 0, 23, 240, 30);
+    p.stroke(hourHue, 70, 80);
+    p.arc(cx, cy, 700, 700, -90, -90 + hourAngle);
+    
+    // Middle ring - minutes (60-minute cycle)
+    p.strokeWeight(20);
+    p.stroke(180, 20, 60, 0.3);
+    p.arc(cx, cy, 550, 550, -90, -90 + minuteAngle);
+    
+    let minuteHue = p.map(m, 0, 59, 180, 120);
+    p.stroke(minuteHue, 60, 70);
+    p.arc(cx, cy, 550, 550, -90, -90 + minuteAngle);
+    
+    // Inner ring - seconds (60-second cycle)
+    p.strokeWeight(15);
+    p.stroke(120, 20, 70, 0.3);
+    p.arc(cx, cy, 400, 400, -90, -90 + secondAngle);
+    
+    let secondHue = p.map(s, 0, 59, 120, 60);
+    p.stroke(secondHue, 80, 80);
+    p.arc(cx, cy, 400, 400, -90, -90 + secondAngle);
+    
+    // Center circle with time
     p.noStroke();
-    p.fill(35, 20, 80);
-    p.circle(400, 400, 500);
-
-    // ---------------------------
-    // ROMAN NUMERAL HOUR LABELS
-    // ---------------------------
-    p.fill(0, 0, 20);
-    p.textSize(26);
-    p.textAlign(p.CENTER, p.CENTER);
-
-    let numerals = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
-
-    for (let i = 0; i < 12; i++) {
-      let angle = i * 30 - 90; // 12 at top
-      let r = 240; // radius for labels
-
-      let x = 400 + r * p.cos(angle);
-      let y = 400 + r * p.sin(angle);
-
-      p.text(numerals[i], x, y);
-    }
-
-    // Gnomon
-    p.stroke(0, 0, 20);
-    p.strokeWeight(8);
-    p.line(400, 400, 400, 250);
-
-    // Shadow (opposite the sun)
-    let shadowLength = 220;
-    let shadowX = 400 + shadowLength * p.cos(sunAngle - 90);
-    let shadowY = 400 + shadowLength * p.sin(sunAngle - 90);
-
-    p.stroke(0, 0, 15, 0.7);
-    p.strokeWeight(6);
-    p.line(400, 400, shadowX, shadowY);
-
-    // Sun position
-    let sunX = 400 + 300 * p.cos(sunAngle - 90);
-    let sunY = 400 + 300 * p.sin(sunAngle - 90);
-
-    p.noStroke();
-    p.fill(50, 80, 100);
-    p.circle(sunX, sunY, 40);
-
-    // Time label
-    let timeString =
-      p.nf(hr, 2) + ":" +
-      p.nf(mn, 2) + ":" +
-      p.nf(sc, 2);
-
-    p.fill(0, 0, 20);
-    p.textSize(32);
-    p.text(timeString, 400, 50);
-
-    // Title
-    p.textSize(26);
-    p.text("Interactive Sundial Clock", 400, 760);
-  };
-
-  // Drag the sun to change time
-  p.mousePressed = function () {
-    let dx = p.mouseX - 400;
-    let dy = p.mouseY - 400;
-    let distFromCenter = p.sqrt(dx * dx + dy * dy);
-
-    // Only allow dragging if clicking near the sun
-    if (distFromCenter > 260 && distFromCenter < 340) {
-      dragging = true;
-    }
-  };
-
-  p.mouseDragged = function () {
-    if (dragging) {
-      let dx = p.mouseX - 400;
-      let dy = p.mouseY - 400;
-      sunAngle = (p.atan2(dy, dx) + 90 + 360) % 360;
-    }
-  };
-
-  p.mouseReleased = function () {
-    dragging = false;
+    p.fill(240, 10, 100);
+    p.circle(cx, cy, 300);
+    
+    // Time display
+    let timeString = p.nf(h, 2) + ":" + p.nf(m, 2) + ":" + p.nf(s, 2);
+    p.fill(240, 30, 20);
+    p.textSize(42);
+    p.text(timeString, cx, cy - 20);
+    
+    // Progress percentages
+    p.textSize(18);
+    p.fill(240, 20, 40);
+    p.text("Hour: " + p.nf(hourProgress * 100, 1, 1) + "%", cx, cy + 40);
+    p.text("Minute: " + p.nf(minuteProgress * 100, 1, 1) + "%", cx, cy + 65);
+    p.text("Second: " + p.nf(secondProgress * 100, 1, 1) + "%", cx, cy + 90);
   };
 
 });
-
